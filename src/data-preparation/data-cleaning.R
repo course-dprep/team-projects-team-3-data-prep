@@ -4,7 +4,7 @@
 library(dplyr)
 library(stringr)
 
-dataset_restaurants <- Dataset %>%
+dataset_restaurants <- Dataset_raw %>%
   filter(str_detect(categories, regex("\\bRestaurants\\b", ignore_case = TRUE)))
 view(dataset_restaurants)
 dataset_restaurants <- dataset_restaurants %>% filter(str_detect(attributes, "RestaurantsPriceRange2"))

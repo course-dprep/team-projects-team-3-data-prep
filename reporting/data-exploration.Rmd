@@ -2,5 +2,190 @@
 title: "Data-exploration"
 output: html_document
 ---
+**Set up chuck**
+```{r}
 
-#
+library(ggplot2)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+**Exploring star rating**
+
+```{r}
+#Summary statistics
+summary(dataset_restaurants$stars)
+
+#Mean and SD
+m_stars <- mean(dataset_restaurants$stars, na.rm = TRUE)
+sd_stars <- sd(dataset_restaurants$stars, na.rm=TRUE)
+
+m_stars
+sd_stars
+
+#Histogram
+ggplot(dataset_restaurants, aes(x = stars)) +
+  geom_histogram(binwidth = 0.5,
+                 fill = "#A6CEE3",
+                 color = "white") +
+  labs(
+    title = "Distribution of Restaurant Star Ratings",
+    x = "Star Rating",
+    y = "Number of Restaurants"
+  ) +
+  theme_minimal()
+```
+
+The figure shows the distribution of restaurant star ratings. Ratings range from 1 to 5 stars, with most restaurants clustered around ratings between approximately 3 and 4.5 stars. The distribution is slightly left-skewed, indicating that relatively few restaurants receive very low ratings.
+
+The average rating in the data set is 3.46 (SD = 0.81), suggesting that overall customer evaluations are generally positive. Since star rating is the dependent variable in our analysis, understanding its distribution provides important context for interpreting the effect of delivery options, dine-experience and price range in later sections.
+
+**Exploring price range**
+
+```{r}
+#Summary statistics 
+
+summary(dataset_restaurants$price_range)
+
+#Histogram
+
+ggplot(dataset_restaurants, aes(x = factor(price_range))) +
+  geom_bar(fill = "#A6CEE3") +
+  labs(
+    title = "Distribution of Restaurant Price Range",
+    x = "Price Range",
+    y = "Number of Restaurants"
+  ) +
+  theme_minimal()
+
+```
+
+The figure shows the distribution of restaurants across the four price categories. The majority of restaurants fall within the lower price segments (price levels 1 and 2), with price level 2 being the most common category. In contrast, relatively fewer restaurants are classified as higher-priced establishments (levels 3 and 4), with 4 only representing a very small proportion of the sample. 
+
+This indicates that the data set is skewed toward lower priced restaurants. Since price range serves as a moderating variable in the analysis, the distribution should be considered when interpreting interaction effects in later sections
+
+**Cluster score**
+```{r}
+#Summary of delivery_score and dine_in_score
+summary(dataset_restaurants$delivery_score)
+
+summary(dataset_restaurants$dinein_score)
+
+#Distribution of the cluster score
+ggplot(dataset_restaurants, aes(x = delivery_score)) +
+  geom_histogram(binwidth = 1, fill = "#A6CEE3", color = "white") +
+  labs(title="Distribution of Delivery Score", x="Delivery Score", y="Number of Restaurants") +
+  theme_minimal()
+
+ggplot(dataset_restaurants, aes(x = dinein_score)) +
+  geom_histogram(binwidth = 1, fill = "#A6CEE3", color = "white") +
+  labs(title="Distribution of Dine-in Score", x="Dine-in Score", y="Number of Restaurants") +
+  theme_minimal()
+
+#Scatterplot for Delivery_score
+ggplot(dataset_restaurants, aes(x = delivery_score, y = stars)) +
+  geom_smooth(method = "lm", color = "black") +
+  labs(
+    title = "Delivery Score and Star Ratings",
+    x = "Delivery Score",
+    y = "Star Rating"
+  ) +
+  scale_y_continuous(limits = c(1,5)) +
+  theme_minimal()
+  
+
+```
+
+```{r}
+  model_delivery <- lm(stars ~ delivery_score, data = dataset_restaurants)
+summary(model_delivery)
+```
+
+A simple linear regression analysis hows a statistically significant negative relationship between delivery score and star rating. This indicates that restaurants offering more delivery-related services tend to receive slightly lower ratings.
+
+However, the effect size is small. A one-point increase in delivery score is associated with a decrease of only 0.063 stars. Even across the full delivery scale, the maximum predicted difference in rating is approximately 0.25 stars.
+
+Furthermore, delivery score explains less than 1% of the variance in star ratings. Suggesting that its importance is limited.
+
+
+**Testing Moderation effect with delivery_score**
+```{r}
+model_moderation <- lm(stars ~ delivery_score * price_range, 
+                       data = dataset_restaurants)
+
+summary(model_moderation)
+```
+
+The interaction between delivery-score and price range is positive and statistically significant, indicating a moderation effect. Specifically, the negative association between delivery services and star ratings weakens and eventually becomes positive as price range increases.
+
+For lower-priced restaurants, offering more delivery-related services is associated with slightly lower ratings. In contrast, for higher-priced restaurants, delivery services are positively associated with star ratings. 
+
+The inclusion of the interaction improves the explanatory power, suggesting that the moderating role of price range is meaningful
+
+```{r}
+ggplot(dataset_restaurants,
+       aes(x = delivery_score,
+           y = stars,
+           color = factor(price_range))) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_y_continuous(limits = c(1,5)) +
+  theme_minimal()
+```
+This figure displays the moderating role of price range on the relationship between delivery score and star ratings. For lower-priced restaurants, an increase in delivery-related services is associated with lower customer ratings. However, this relationship gradually becomes positive as price range increases.(although the slope for the highest price category appears relatively flat visually, the regression results indicate a positive interaction effect)
+
+
+**Dine_in_score**
+
+```{r}
+summary(dataset_restaurants$dinein_score)
+        
+ggplot(dataset_restaurants, aes(x = dinein_score, y = stars)) +
+  geom_smooth(method = "lm", color = "black") +
+  scale_y_continuous(limits = c(1,5)) +
+  labs(
+    title = "Dine-in Score and Star Ratings",
+    x = "Dine-in Score",
+    y = "Star Rating"
+  ) +
+  theme_minimal()      
+
+```
+
+This figure shows the relationship between dine-in score and star ratings. The fitted regression line indicates a positive association, suggesting that restaurants offering more dine-in related services tend to receive higher customer ratings. THe slope appears stepper than that observed for delivery score, indicating that dine-in experience may have a stronger relationship with customer evaluations.
+
+```{r}
+model_dinein <- lm(stars ~ dinein_score,
+                   data = dataset_restaurants)
+summary(model_dinein)
+```
+A simple linear regression shows a statistically significant positive relationship between dine-in score and star rating. This suggests that restaurants offering  more dine-in related services tend to receive higher ratings. The effect size is meaningful: across the observed range of the dine-in-score, the predicted difference in ratings is approximately 0.58 stars.
+
+The model explains about 2.9% of the variance in star ratings, indicating that dine-in experience is a stronger predictor of ratings than delivery options in this dataset.
+
+**Moderation for dine-in**
+```{r}
+model_dinein_mod <- lm(stars ~ dinein_score * price_range, data = dataset_restaurants)
+summary(model_dinein_mod)
+```
+A regression model including an interaction between dine-in score and price range shows a statistically significant moderation effect. The positive association between dine-in experience and star ratings becomes weaker as price range increases. 
+
+Simple slope calculations indicate that dine-in score is positively related to ratings for lower-priced, but the slope diminishes for mid-priced restaurants and can become sightly negative for higher-priced categories.This suggests that dine-in features are more strongly valued in lower priced restaurants than in higher-priced ones.  
+
+
+```{r}
+ggplot(dataset_restaurants,
+       aes(x = dinein_score, y = stars, color = factor(price_range))) +
+  geom_smooth(method = "lm", se = FALSE) +
+  scale_y_continuous(limits = c(1,5)) +
+  labs(
+    title = "Dine-in Score and Star Ratings by Price Range",
+    x = "Dine-in Score",
+    y = "Star Rating",
+    color = "Price Range"
+  ) +
+  theme_minimal()
+```
+
+This figure represents the moderating role of price range on the relationship between dine-in score and star ratings. Across all price levels, dine-in score is positively associated with star ratings. However, the strength of this relationship diminishes as price range increases. 
+
+For lower-priced restaurants, improvements in dine-in features are associated with relatively larger increases in customer ratings. In contrast, for higher priced-establishments, the relationship is weaker. This pattern is consistent with the negative interaction term observed in the regression analysis. 
+
